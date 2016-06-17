@@ -1,0 +1,137 @@
+[{
+    "id": 1,
+    "code": "JK",
+    "name": "DKI Jakarta"
+}, {
+    "id": 2,
+    "code": "BT",
+    "name": "Banten"
+}, {
+    "id": 3,
+    "code": "JB",
+    "name": "Jawa Barat"
+}, {
+    "id": 4,
+    "code": "SU",
+    "name": "Sumatera Utara"
+}, {
+    "id": 5,
+    "code": "AC",
+    "name": "Nanggroe Aceh Darussalam (NAD)"
+}, {
+    "id": 6,
+    "code": "SB",
+    "name": "Sumatera Barat"
+}, {
+    "id": 7,
+    "code": "RI",
+    "name": "Riau"
+}, {
+    "id": 8,
+    "code": "KR",
+    "name": "Kepulauan Riau"
+}, {
+    "id": 9,
+    "code": "SS",
+    "name": "Sumatera Selatan"
+}, {
+    "id": 10,
+    "code": "BB",
+    "name": "Bangka Belitung"
+}, {
+    "id": 11,
+    "code": "LA",
+    "name": "Lampung"
+}, {
+    "id": 12,
+    "code": "JA",
+    "name": "Jambi"
+}, {
+    "id": 13,
+    "code": "BE",
+    "name": "Bengkulu"
+}, {
+    "id": 14,
+    "code": "JT",
+    "name": "Jawa Tengah"
+}, {
+    "id": 15,
+    "code": "YO",
+    "name": "DI Yogyakarta"
+}, {
+    "id": 16,
+    "code": "JI",
+    "name": "Jawa Timur"
+}, {
+    "id": 17,
+    "code": "KS",
+    "name": "Kalimantan Selatan"
+}, {
+    "id": 18,
+    "code": "KT",
+    "name": "Kalimantan Tengah"
+}, {
+    "id": 19,
+    "code": "KI",
+    "name": "Kalimantan Timur"
+}, {
+    "id": 20,
+    "code": "KU",
+    "name": "Kalimantan Utara"
+}, {
+    "id": 21,
+    "code": "KB",
+    "name": "Kalimantan Barat"
+}, {
+    "id": 22,
+    "code": "BA",
+    "name": "Bali"
+}, {
+    "id": 23,
+    "code": "NB",
+    "name": "Nusa Tenggara Barat (NTB)"
+}, {
+    "id": 24,
+    "code": "NT",
+    "name": "Nusa Tenggara Timur (NTT)"
+}, {
+    "id": 25,
+    "code": "SN",
+    "name": "Sulawesi Selatan"
+}, {
+    "id": 26,
+    "code": "SR",
+    "name": "Sulawesi Barat"
+}, {
+    "id": 27,
+    "code": "SG",
+    "name": "Sulawesi Tenggara"
+}, {
+    "id": 28,
+    "code": "ST",
+    "name": "Sulawesi Tengah"
+}, {
+    "id": 29,
+    "code": "SA",
+    "name": "Sulawesi Utara"
+}, {
+    "id": 30,
+    "code": "GO",
+    "name": "Gorontalo"
+}, {
+    "id": 31,
+    "code": "MA",
+    "name": "Maluku"
+}, {
+    "id": 32,
+    "code": "MU",
+    "name": "Maluku Utara"
+}, {
+    "id": 33,
+    "code": "PA",
+    "name": "Papua"
+}, {
+    "id": 34,
+    "code": "PB",
+    "name": "Papua Barat"
+}]

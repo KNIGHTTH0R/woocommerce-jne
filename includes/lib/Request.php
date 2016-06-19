@@ -2,13 +2,6 @@
 
 class Neokurir_Request
 {
-    private $access_token = '';
-
-    public static function set_access_token($access_token)
-    {
-        self::$access_token = $access_token;
-    }
-
     public static function get($url, $query = array())
     {
         if (!empty($query)) {
@@ -37,7 +30,7 @@ class Neokurir_Request
             CURLOPT_CUSTOMREQUEST  => $post ? 'POST' : 'GET',
             CURLOPT_POST           => $post,
             CURLOPT_POSTFIELDS     => http_build_query($request),
-            CURLOPT_HTTPHEADER     => !empty(self::$access_token) ? array('Authorization: Bearer ' . self::$access_token) : array(),
+            CURLOPT_HTTPHEADER     => !empty(Neokurir_Config::$access_token) ? array('Authorization: Bearer ' . Neokurir_Config::$access_token) : array(),
         ));
 
         $response = curl_exec($ch);

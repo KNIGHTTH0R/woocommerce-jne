@@ -39,23 +39,30 @@ class WC_NeoKurir_JNE_Shipping extends WC_Shipping_Method
      **/
     public function __construct()
     {
-        $this->id                 = 'wc_neokurir_jne';
+        $this->id                 = WC_NEOKURIR_JNE_PLUGIN_ID;
         $this->method_title       = __('Neo Kurir JNE Shipping', 'wc-neokurir-jne-shipping');
         $this->method_description = __('Plugin cek ongkos kirim JNE untuk woocommerce shipping menggunakan layanan API dari Neo Kurir secara realtime.', 'wc-neokurir-jne-shipping');
+
+        // Option key
+        $this->option_access_token  = $this->id . '_access_token';
+        $this->option_expired_token = $this->id . '_access_token_expired';
+        $this->option_services      = $this->id . '_services';
 
         // Get Settings
         $this->init_form_fields();
         $this->init_settings();
+        $this->init_default_services();
 
-        $this->title         = $this->settings['title'];
-        $this->client_id     = $this->settings['client_id'];
-        $this->client_secret = $this->settings['client_secret'];
-        $this->weight        = $this->settings['weight'];
-        $this->add_fee       = $this->settings['add_fee'];
-        $this->logger        = new WC_Logger();
+        $this->title          = $this->settings['title'];
+        $this->client_id      = $this->settings['client_id'];
+        $this->client_secret  = $this->settings['client_secret'];
+        $this->weight         = $this->settings['weight'];
+        $this->store_location = $this->settings['store_location'];
+        $this->logger         = new WC_Logger();
 
         // Save settings in admin
         add_action('woocommerce_update_options_shipping_' . $this->id, array(&$this, 'process_admin_options'));
+        add_action('woocommerce_update_options_shipping_' . $this->id, array(&$this, 'process_admin_custom_options'));
     }
 
     /**
@@ -65,28 +72,35 @@ class WC_NeoKurir_JNE_Shipping extends WC_Shipping_Method
     {
 
         $this->form_fields = array(
-            'enabled'       => array(
+            'enabled'        => array(
                 'title'   => __('Enable/Disable', 'wc-neokurir-jne-shipping'),
                 'type'    => 'checkbox',
                 'label'   => __('Enable WooCommerce Neo Kurir JNE Shipping', 'wc-neokurir-jne-shipping'),
                 'default' => 'no',
             ),
-            'title'         => array(
+            'title'          => array(
                 'title'   => __('Method Title', 'wc-neokurir-jne-shipping'),
                 'type'    => 'text',
                 'default' => __('JNE Shipping', 'wc-neokurir-jne-shipping'),
             ),
-            'client_id'     => array(
+            'client_id'      => array(
                 'title'       => __('Client ID', 'wc-neokurir-jne-shipping'),
                 'type'        => 'text',
                 'description' => __('Client ID yang diberikan oleh Neo Kurir.', 'wc-neokurir-jne-shipping'),
             ),
-            'client_secret' => array(
+            'client_secret'  => array(
                 'title'       => __('Client Secret', 'wc-neokurir-jne-shipping'),
                 'type'        => 'text',
                 'description' => __('Client Secret yang diberikan oleh Neo Kurir.', 'wc-neokurir-jne-shipping'),
             ),
-            'weight'        => array(
+            'store_location' => array(
+                'title'       => __('Store Location', 'wc-neokurir-jne-shipping'),
+                'description' => __('Pilih lokasi toko Anda berada.', 'wc-neokurir-jne-shipping'),
+                'type'        => 'select',
+                'class'       => 'wc-enhanced-select',
+                'options'     => nk_get_cities(),
+            ),
+            'weight'         => array(
                 'title'             => __('Default Weight ( kg )', 'wc-neokurir-jne-shipping'),
                 'description'       => __('Berat default setiap produk jika tidak mempunyai informasi berat.', 'wc-neokurir-jne-shipping'),
                 'type'              => 'number',
@@ -97,18 +111,23 @@ class WC_NeoKurir_JNE_Shipping extends WC_Shipping_Method
                 'placeholder'       => '0.00',
                 'default'           => '1',
             ),
-            'add_fee'       => array(
-                'title'             => __('Additional Fee', 'wc-neokurir-jne-shipping'),
-                'description'       => __('Biaya tambahan untuk setiap ongkos kirim.', 'wc-neokurir-jne-shipping'),
-                'type'              => 'number',
-                'custom_attributes' => array(
-                    'step' => 'any',
-                    'min'  => '0',
-                ),
-                'placeholder'       => '0.00',
-                'default'           => '0',
+            'services'       => array(
+                'type'        => 'jne_service',
+                'title'       => __('JNE Services', 'wc-neokurir-jne-shipping'),
+                'description' => __('Additional fee digunakan untuk biaya tambahan pada setiap pengiriman.', 'wc-neokurir-jne-shipping'),
             ),
         );
+    }
+
+    /**
+     * Load default JNE Services
+     */
+    private function init_default_services()
+    {
+        $servives_options = get_option($this->option_services);
+        if (empty($servives_options)) {
+            nk_save_option($this->option_services, nk_default_services());
+        }
     }
 
     /**
@@ -120,6 +139,11 @@ class WC_NeoKurir_JNE_Shipping extends WC_Shipping_Method
 
             // Required fields check
             if (!$this->client_id) {
+                return false;
+            }
+
+            // Required fields check
+            if (!$this->store_location) {
                 return false;
             }
 
@@ -140,13 +164,15 @@ class WC_NeoKurir_JNE_Shipping extends WC_Shipping_Method
     public function calculate_shipping($package)
     {
 
-        $country = WC()->customer->get_shipping_country();
-        $state   = WC()->customer->get_shipping_state();
-        $city    = WC()->customer->get_shipping_city();
+        $country     = WC()->customer->get_shipping_country();
+        $state       = WC()->customer->get_shipping_state();
+        $city        = WC()->customer->get_shipping_city();
+        $destination = nk_find_city_id($city);
 
-        if ($country != 'ID' || sizeof($package) == 0) {
+        if ($country != 'ID' || sizeof($package) == 0 || !$destination) {
             return false;
         }
+
 
         $weight = $this->calculate_weight($package['contents']);
         if (is_numeric($weight) && floor($weight) != $weight) {
@@ -155,64 +181,39 @@ class WC_NeoKurir_JNE_Shipping extends WC_Shipping_Method
             $weight     = ($jne_weight == 0) ? 1 : $jne_weight;
         }
 
-        $access_token = Neokurir_Api::access_token([
-            'grant_type'    => 'client_credentials',
-            'client_id'     => $this->client_id,
-            'client_secret' => $this->client_secret,
-        ]);
-
-        if ($access_token) {
-            echo $access_token;
+        $expired_stamp = get_option($this->option_expired_token);
+        if (Neokurir_Api::is_token_expired($expired_stamp)) {
+            $access_token = Neokurir_Api::access_token([
+                'grant_type'    => 'client_credentials',
+                'client_id'     => $this->client_id,
+                'client_secret' => $this->client_secret,
+            ]);
+            if ($access_token) {
+                nk_save_option($this->option_access_token, $access_token->access_token);
+                nk_save_option($this->option_expired_token, time() + $access_token->expires_in);
+            }
         }
 
-        //get the total weight and dimensions
-        // $weight     = 0;
-        // $dimensions = 0;
-        // foreach ($package['contents'] as $item_id => $values) {
-        //     $_product   = $values['data'];
-        //     $weight     = $weight + $_product->get_weight() * $values['quantity'];
-        //     $dimensions = $dimensions + (($_product->length * $values['quantity']) * $_product->width * $_product->height);
+        $access_token = get_option($this->option_access_token);
+        $prices       = Neokurir_Api::get_price($access_token, [
+            'origin'      => $this->store_location,
+            'destination' => $destination,
+            'weight'      => round($weight),
+            'courier'     => "JNE",
+        ]);
 
-        // }
+        if ($prices) {
+            foreach ($prices as $price) {
+                // send the final rate to the user.
+                $this->add_rate(array(
+                    'id'    => $this->id . '_' . strtolower($price->service->name),
+                    'label' => $price->courier->code . ' ' . $price->service->name,
+                    'cost'  => $price->price,
+                ));
+            }
+        }
 
-        // //calculate the cost according to the table
-        // switch ($weight) {
-        //     case ($weight < 1):
-        //         switch ($dimensions) {
-        //             case ($dimensions <= 1000):
-        //                 $cost = 3;
-        //                 break;
-        //             case ($dimensions > 1000):
-        //                 $cost = 4;
-        //                 break;
-        //         }
-        //         break;
-        //     case ($weight >= 1 && $weight < 3):
-        //         switch ($dimensions) {
-        //             case ($dimensions <= 3000):
-        //                 $cost = 10;
-        //                 break;
-        //         }
-        //         break;
-        //     case ($weight >= 3 && $weight < 10):
-        //         switch ($dimensions) {
-        //             case ($dimensions <= 5000):
-        //                 $cost = 25;
-        //                 break;
-        //             case ($dimensions > 5000):
-        //                 $cost = 50;
-        //                 break;
-        //         }
-        //         break;
-
-        // }
-
-        // // send the final rate to the user.
-        // $this->add_rate(array(
-        //     'id'    => $this->id,
-        //     'label' => $this->title,
-        //     'cost'  => $cost,
-        // ));
+        return false;
     }
 
     /**
@@ -252,5 +253,58 @@ class WC_NeoKurir_JNE_Shipping extends WC_Shipping_Method
         $weight = number_format((float) $weight, 2, '.', '');
 
         return $weight;
+    }
+
+    /**
+     * Process custom field for services
+     **/
+    public function process_admin_custom_options()
+    {
+        // Save custom option JNE services
+        $services  = get_option($this->option_services);
+        $field_key = $this->get_field_key('services');
+
+        for ($i = 0; $i < count($services); $i++) {
+            foreach ($services[$i] as $k => $v) {
+
+                if ($k == 'enable') {
+                    $services[$i][$k] = 0;
+                }
+
+                $key = $field_key . '_' . $i . '_' . $k;
+                if (isset($_POST[$key]) && !empty($_POST[$key])) {
+                    $services[$i][$k] = $_POST[$key];
+                }
+            }
+        }
+
+        nk_save_option($this->option_services, $services);
+    }
+
+    /**
+     * Field for services
+     **/
+    public function generate_jne_service_html($key, $data)
+    {
+        $field_key = $this->get_field_key($key);
+        $defaults  = array(
+            'title'             => '',
+            'disabled'          => false,
+            'class'             => '',
+            'css'               => '',
+            'placeholder'       => '',
+            'type'              => 'text',
+            'desc_tip'          => false,
+            'description'       => '',
+            'custom_attributes' => array(),
+        );
+
+        $data     = wp_parse_args($data, $defaults);
+        $services = get_option($this->option_services);
+
+        ob_start();
+        include WC_NEOKURIR_JNE_TEMPLATE_PATH . '/admin-jne-services.php';
+
+        return ob_get_clean();
     }
 }
